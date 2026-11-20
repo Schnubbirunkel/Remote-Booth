@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "store_id": "remote-booth",
+  "name": "Remote Booth",
+  "description": "Self-hosted remote podcast studio: record guests as separate tracks, edit and export in the browser.",
+  "maintainer": "Schnubbirunkel",
+  "url": "https://github.com/Schnubbirunkel/Remote-Booth"
+}

@@ -1,0 +1,45 @@
+name: remote-booth
+services:
+  remote-booth:
+    image: ghcr.io/schnubbirunkel/remote-booth:1.0.0
+    container_name: remote-booth
+    restart: unless-stopped
+    network_mode: bridge
+    ports:
+      - target: 8080
+        published: "8090"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/data
+        target: /data
+      - type: bind
+        source: /DATA
+        target: /DATA
+      - type: bind
+        source: /media
+        target: /media
+        bind:
+          propagation: rslave
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      BROWSE_ROOTS: /DATA,/media
+      EXPORT_CPU: "80"
+      MAX_PEERS: "4"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+x-casaos:
+  id: io.github.schnubbirunkel.remotebooth
+  main: remote-booth
+  index: /
+  port_map: "8090"
+  scheme: http
+  icon: https://cdn.jsdelivr.net/gh/Schnubbirunkel/Remote-Booth@gh-pages/apps/io.github.schnubbirunkel.remotebooth/assets/icon.svg
+  version: "1.0.0"
+  title:
+    en_US: Remote Booth
+    de_DE: Remote Booth

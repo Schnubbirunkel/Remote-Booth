@@ -1,0 +1,36 @@
+{
+  "thumbnail": "/apps/io.github.schnubbirunkel.remotebooth/assets/editor-en.webp",
+  "screenshot_link": [
+    "/apps/io.github.schnubbirunkel.remotebooth/assets/editor-en.webp",
+    "/apps/io.github.schnubbirunkel.remotebooth/assets/effects-en.webp",
+    "/apps/io.github.schnubbirunkel.remotebooth/assets/dashboard-en.webp"
+  ],
+  "category": "Media",
+  "architectures": [
+    "amd64",
+    "arm64"
+  ],
+  "author": "Schnubbirunkel",
+  "developer": "Schnubbirunkel",
+  "website": "https://github.com/Schnubbirunkel/Remote-Booth",
+  "repo": "https://github.com/Schnubbirunkel/Remote-Booth",
+  "support": "https://github.com/Schnubbirunkel/Remote-Booth/issues",
+  "tagline": "Remote podcast studio – every guest on their own track",
+  "description": "Record remote podcasts in the browser. Every participant is recorded locally in full quality as a separate MP3 track and uploaded to your server while you talk – a shaky connection does not affect the recording.\n\nIncludes a multitrack editor (clips, ripple cuts, fades, envelopes, gate, EQ, compressor, limiter, loudness normalisation), a media pool for intros, outros and jingles, and an export that renders the finished episode on your server.\n\nOn first start you set a password, the language and the folders for recordings, exports and the media pool. For guests outside your network you need an HTTPS address (e.g. Cloudflare Tunnel or Tailscale Funnel) – see the README.\n",
+  "tips": {
+    "before_install": "After installation, open the app: the setup screen asks for a password, the language and the storage folders. Guests from outside your network need an HTTPS address for camera and microphone.\n"
+  },
+  "title": "Remote Booth",
+  "release_note": "First public release.",
+  "base_url": "https://cdn.jsdelivr.net/gh/Schnubbirunkel/Remote-Booth@gh-pages",
+  "id": "io.github.schnubbirunkel.remotebooth",
+  "version": "1.0.0",
+  "categories": [
+    "media"
+  ],
+  "min_memory": 0,
+  "min_image_size": {
+    "amd64": 0,
+    "arm64": 0
+  }
+}

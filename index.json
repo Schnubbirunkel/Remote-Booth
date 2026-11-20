@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "updated_at": "2026-11-20T14:26:48Z",
+  "app_count": 1,
+  "base_url": "https://cdn.jsdelivr.net/gh/Schnubbirunkel/Remote-Booth@gh-pages",
+  "apps": [
+    {
+      "id": "io.github.schnubbirunkel.remotebooth",
+      "title": "Remote Booth",
+      "tagline": "Remote podcast studio – every guest on their own track",
+      "category": "Media",
+      "categories": [
+        "media"
+      ],
+      "author": "Schnubbirunkel",
+      "developer": "Schnubbirunkel",
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "icon": "/apps/io.github.schnubbirunkel.remotebooth/assets/icon.svg",
+      "thumbnail": "/apps/io.github.schnubbirunkel.remotebooth/assets/editor-en.webp",
+      "compose_url": "/apps/io.github.schnubbirunkel.remotebooth/docker-compose.yml",
+      "meta_url": "/apps/io.github.schnubbirunkel.remotebooth/meta.json",
+      "content_hash": "da61e303",
+      "version": "1.0.0"
+    }
+  ]
+}
