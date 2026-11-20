@@ -1,0 +1,121 @@
+name: remote-booth
+services:
+  remote-booth:
+    image: ghcr.io/schnubbirunkel/remote-booth:1.0.0
+    container_name: remote-booth
+    restart: unless-stopped
+    network_mode: bridge
+    ports:
+      - target: 8080
+        published: "8090"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: /DATA/AppData/$AppID/data
+        target: /data
+      - type: bind
+        source: /DATA
+        target: /DATA
+      - type: bind
+        source: /media
+        target: /media
+        bind:
+          propagation: rslave
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      BROWSE_ROOTS: /DATA,/media
+      EXPORT_CPU: "80"
+      MAX_PEERS: "4"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    x-casaos:
+      envs:
+        - container: TZ
+          description:
+            en_US: Time zone
+            de_DE: Zeitzone
+        - container: BROWSE_ROOTS
+          description:
+            en_US: Folders that can be chosen in the app's folder browser
+            de_DE: Ordner, die im Ordner-Browser der App auswählbar sind
+        - container: EXPORT_CPU
+          description:
+            en_US: CPU share an export may use (percent of all threads)
+            de_DE: CPU-Anteil, den ein Export nutzen darf (Prozent aller Threads)
+        - container: MAX_PEERS
+          description:
+            en_US: Maximum number of people per room
+            de_DE: Maximale Anzahl Personen pro Raum
+      ports:
+        - container: "8080"
+          description:
+            en_US: Web interface
+            de_DE: Weboberfläche
+      volumes:
+        - container: /data
+          description:
+            en_US: App data (settings, rooms, presets, default storage)
+            de_DE: App-Daten (Einstellungen, Räume, Vorlagen, Standard-Speicherort)
+        - container: /DATA
+          description:
+            en_US: ZimaOS storage – choose folders for recordings, exports and media pool in the app
+            de_DE: ZimaOS-Speicher – Ordner für Aufnahmen, Exporte und Mediapool in der App wählen
+        - container: /media
+          description:
+            en_US: Network shares and external drives
+            de_DE: Netzlaufwerke und externe Laufwerke
+
+x-casaos:
+  id: io.github.schnubbirunkel.remotebooth
+  main: remote-booth
+  index: /
+  port_map: "8090"
+  scheme: http
+  icon: https://cdn.jsdelivr.net/gh/Schnubbirunkel/Remote-Booth@main/appstore/Apps/RemoteBooth/icon.svg
+  thumbnail: https://cdn.jsdelivr.net/gh/Schnubbirunkel/Remote-Booth@main/docs/editor-en.png
+  screenshot_link:
+    - https://cdn.jsdelivr.net/gh/Schnubbirunkel/Remote-Booth@main/docs/editor-en.png
+    - https://cdn.jsdelivr.net/gh/Schnubbirunkel/Remote-Booth@main/docs/effects-en.png
+    - https://cdn.jsdelivr.net/gh/Schnubbirunkel/Remote-Booth@main/docs/dashboard-en.png
+  category: Media
+  version: "1.0.0"
+  architectures:
+    - amd64
+    - arm64
+  author: Schnubbirunkel
+  developer: Schnubbirunkel
+  website: https://github.com/Schnubbirunkel/Remote-Booth
+  repo: https://github.com/Schnubbirunkel/Remote-Booth
+  support: https://github.com/Schnubbirunkel/Remote-Booth/issues
+  title:
+    en_US: Remote Booth
+    de_DE: Remote Booth
+  tagline:
+    en_US: Remote podcast studio – every guest on their own track
+    de_DE: Podcast-Studio für Ferngespräche – jeder Gast auf eigener Spur
+  description:
+    en_US: |
+      Record remote podcasts in the browser. Every participant is recorded locally in full quality as a separate MP3 track and uploaded to your server while you talk – a shaky connection does not affect the recording.
+
+      Includes a multitrack editor (clips, ripple cuts, fades, envelopes, gate, EQ, compressor, limiter, loudness normalisation), a media pool for intros, outros and jingles, and an export that renders the finished episode on your server.
+
+      On first start you set a password, the language and the folders for recordings, exports and the media pool. For guests outside your network you need an HTTPS address (e.g. Cloudflare Tunnel or Tailscale Funnel) – see the README.
+    de_DE: |
+      Podcasts mit Gästen aus der Ferne im Browser aufnehmen. Jede Person wird lokal in voller Qualität als eigene MP3-Spur aufgenommen und schon während des Gesprächs auf deinen Server geladen – eine wackelige Verbindung schadet der Aufnahme nicht.
+
+      Mit Mehrspur-Editor (Clips, Ripple-Schnitt, Fades, Hüllkurven, Gate, EQ, Kompressor, Limiter, Lautheitsangleichung), Mediapool für Intros, Outros und Jingles und einem Export, der die fertige Folge auf deinem Server berechnet.
+
+      Beim ersten Start legst du Passwort, Sprache und die Ordner für Aufnahmen, Exporte und Mediapool fest. Für Gäste außerhalb deines Netzes brauchst du eine HTTPS-Adresse (z. B. Cloudflare Tunnel oder Tailscale Funnel) – siehe README.
+  tips:
+    before_install:
+      en_US: |
+        After installation, open the app: the setup screen asks for a password, the language and the storage folders. Guests from outside your network need an HTTPS address for camera and microphone.
+      de_DE: |
+        Nach der Installation die App öffnen: Die Einrichtung fragt nach Passwort, Sprache und Speicherorten. Gäste außerhalb deines Netzes brauchen eine HTTPS-Adresse für Kamera und Mikrofon.
+  release_notes:
+    en_US: First public release.
+    de_DE: Erste öffentliche Version.

@@ -1,0 +1,119 @@
+# Remote Booth – docker compose for any Docker host
+#
+#   Start:   docker compose up -d        (settings in .env, template: .env.example)
+#   Open:    http://<host>:8090  → the first visit runs the setup (password, language, folders)
+#
+# ZimaOS / CasaOS users: use the app store or zimaos-appstore/Apps/RemoteBooth/docker-compose.yml instead.
+#
+# Optional extra services (set COMPOSE_PROFILES in .env):
+#   tailscale = public HTTPS address via Tailscale Funnel (no domain, no port forwarding)
+#   https     = own domain with Caddy + Let's Encrypt (ports 80/443 must be forwarded)
+#   turn      = own TURN server (only needed if calls cannot connect)
+
+services:
+  remote-booth:
+    image: ghcr.io/schnubbirunkel/remote-booth:latest
+    # To build the image yourself instead:  docker compose build
+    build: .
+    container_name: remote-booth
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8090}:8080"
+    volumes:
+      # App data: settings, rooms, presets – and the default folders for recordings, exports and media pool
+      - ${DATA_PATH:-./data}:/data
+      # Storage you can pick in the folder browser (recordings, exports, media pool)
+      - ${STORAGE_PATH:-./storage}:/storage
+      # Network shares mounted by the host (uncomment on Linux hosts that mount shares under /media).
+      # "rslave" makes shares visible that are mounted after the container started.
+      # - /media:/media:rslave
+    environment:
+      - TZ=${TZ:-Etc/UTC}
+      # Folders the folder browser may show (inside the container)
+      - BROWSE_ROOTS=${BROWSE_ROOTS:-/storage,/media}
+      # Optional: fixed password (otherwise it is set in the setup screen)
+      - APP_PASSWORD=${APP_PASSWORD:-}
+      # Optional: interface language for new visitors (de, en; empty = browser language)
+      - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-}
+      # Optional: owner of exported files (output of "id"), otherwise they are writable for everyone
+      - PUID=${PUID:-}
+      - PGID=${PGID:-}
+      - STUN_URL=${STUN_URL:-stun:stun.l.google.com:19302}
+      - TURN_URL=${TURN_URL:-}
+      - TURN_SECRET=${TURN_SECRET:-}
+      - TURN_USER=${TURN_USER:-}
+      - TURN_PASS=${TURN_PASS:-}
+      - ICE_SERVERS=${ICE_SERVERS:-}
+      - EXPORT_CPU=${EXPORT_CPU:-80}
+      - MAX_PEERS=${MAX_PEERS:-4}
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  # Optional: public HTTPS address via Tailscale Funnel → https://<TS_HOSTNAME>.<your-tailnet>.ts.net
+  tailscale:
+    profiles: ["tailscale"]
+    image: tailscale/tailscale:latest
+    container_name: remote-booth-tailscale
+    hostname: ${TS_HOSTNAME:-remote-booth}
+    restart: unless-stopped
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY:-}
+      - TS_HOSTNAME=${TS_HOSTNAME:-remote-booth}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/funnel.json
+      - TS_USERSPACE=true
+    volumes:
+      - ${DATA_PATH:-./data}/tailscale:/var/lib/tailscale
+      - ./deploy/tailscale-funnel.json:/config/funnel.json:ro
+    depends_on:
+      - remote-booth
+
+  # Optional: own TURN server – only needed if no direct connection can be made
+  # (e.g. guest behind a corporate firewall or mobile carrier NAT).
+  # Needs port forwarding: 3478 UDP+TCP and 49160-49200 UDP.
+  coturn:
+    profiles: ["turn"]
+    image: coturn/coturn:latest
+    container_name: remote-booth-coturn
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - -n
+      - --log-file=stdout
+      - --listening-port=3478
+      - --min-port=49160
+      - --max-port=49200
+      - --fingerprint
+      - --use-auth-secret
+      - --static-auth-secret=${TURN_SECRET:-please-change}
+      - --realm=${TURN_REALM:-remote-booth.local}
+      - --external-ip=${PUBLIC_IP:-}
+      - --no-cli
+      - --no-tls
+      - --no-dtls
+      - --no-multicast-peers
+      - --denied-peer-ip=10.0.0.0-10.255.255.255
+      - --denied-peer-ip=172.16.0.0-172.31.255.255
+      - --denied-peer-ip=192.168.0.0-192.168.255.255
+
+  # Optional: HTTPS with an automatic Let's Encrypt certificate (own domain + port forwarding 80/443)
+  caddy:
+    profiles: ["https"]
+    image: caddy:2-alpine
+    container_name: remote-booth-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-podcast.example.com}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on:
+      - remote-booth
+
+volumes:
+  caddy_data:

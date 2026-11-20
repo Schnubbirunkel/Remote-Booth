@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0f14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Remote Booth</title>
+  <link rel="icon" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    .wrap-page { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; display: flex; flex-direction: column; gap: 28px; }
+    .hero { display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+    .hero h1 { font-size: 28px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    .room-card { display: flex; flex-direction: column; gap: 14px; }
+    .room-card h3 { font-size: 16px; }
+    .sess { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+    .sess:last-child { border-bottom: 0; }
+    .sess .t { font-weight: 600; }
+    .sess .tracks { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .section-h { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .section-h h2 { font-size: 17px; }
+    #login { display: grid; place-items: center; min-height: 100vh; }
+    .empty { padding: 30px; text-align: center; color: var(--muted); }
+    .topbar { padding-top: env(safe-area-inset-top); height: calc(60px + env(safe-area-inset-top)); }
+    @media (max-width: 760px) {
+      .wrap-page { padding: 18px 12px calc(40px + env(safe-area-inset-bottom)); gap: 20px; }
+      .hero h1 { font-size: 22px; }
+      #newRoom { width: 100%; }
+      #newRoom input { flex: 1; width: auto !important; }
+      .grid { grid-template-columns: 1fr; }
+      .sess { grid-template-columns: 1fr; padding: 12px; }
+      .sess > .row { justify-content: flex-start; }
+      .sess > .row .btn:first-child { flex: 1; }
+      #hostInfo { display: none; }
+    }
+    @media (pointer: coarse) { input { font-size: 16px !important; } .btn { touch-action: manipulation; } }
+  </style>
+</head>
+<body>
+  <section id="setup" class="hidden"></section>
+  <section id="login" class="hidden">
+    <form class="card col" style="width:min(380px,92vw);gap:16px" id="loginForm">
+      <div class="row" style="align-items:center"><div class="brand grow" id="loginBrand"></div><span data-lang-picker></span></div>
+      <label class="field">Passwort<input type="password" id="pw" autofocus></label>
+      <button class="btn primary">Anmelden</button>
+    </form>
+  </section>
+  <section id="app" class="hidden">
+    <header class="topbar"><div class="brand" id="brand"></div><div class="grow"></div><span class="muted" id="hostInfo" style="font-size:12.5px"></span><button class="btn icon" id="settingsBtn" title="Einstellungen"></button></header>
+    <div class="wrap-page">
+      <div class="hero">
+        <div class="grow">
+          <h1>Deine Aufnahmeräume</h1>
+          <div class="muted" style="margin-top:4px">Raum anlegen → Link an deinen Gast schicken → gemeinsam aufnehmen. Jede Person wird als eigene MP3-Spur gesichert.</div>
+        </div>
+        <form class="row" id="newRoom"><input type="text" id="roomName" placeholder="Name, z. B. „Mein Podcast“" maxlength="80" style="width:260px"><button class="btn primary" id="newRoomBtn"></button></form>
+      </div>
+      <div class="grid" id="rooms"></div>
+      <div>
+        <div class="section-h"><h2>Aufnahmen</h2><span class="muted" id="sessCount"></span></div>
+        <div class="card" style="padding:0" id="sessions"></div>
+      </div>
+    </div>
+  </section>
+  <script type="module" src="/js/home.js"></script>
+</body>
+</html>

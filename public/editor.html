@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0f14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Editor · Remote Booth</title>
+  <link rel="icon" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/app.css">
+  <style>
+    body { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    .topbar input.title { background: transparent; border-color: transparent; font-weight: 650; font-size: 15px; width: min(460px, 40vw); }
+    .topbar input.title:hover { border-color: var(--line-2); }
+    .transport { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--bg-2); flex-wrap: nowrap; overflow-x: auto; }
+    .transport > * { flex: none; }
+    .transport .sel-info { flex: 1 1 auto; min-width: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .transport .time { font: 600 20px var(--mono); font-variant-numeric: tabular-nums; min-width: 210px; }
+    .transport .time small { color: var(--muted); font-size: 13px; }
+    .playbtn { width: 46px; height: 46px; border-radius: 50%; }
+    .playbtn svg { width: 20px; height: 20px; }
+    .sep { width: 1px; height: 28px; background: var(--line); margin: 0 4px; }
+    .sel-info { font-size: 12.5px; color: var(--muted); }
+    /* Zeitachse mit eigenen, immer sichtbaren Scrollbalken (rechts und unten) */
+    .tl-area { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr var(--sb); grid-template-rows: 1fr var(--sb); --sb: 14px; }
+    .tl-wrap { grid-area: 1 / 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; position: relative; scrollbar-width: none; overscroll-behavior: contain; }
+    .tl-wrap::-webkit-scrollbar, .scroller::-webkit-scrollbar { display: none; }
+    .sbar { position: relative; background: #12151d; touch-action: none; user-select: none; }
+    .sbar.v { grid-area: 1 / 2; border-left: 1px solid var(--line); }
+    .hrow { grid-area: 2 / 1; display: flex; border-top: 1px solid var(--line); background: #12151d; }
+    .hrow .hpad { flex: none; border-right: 1px solid var(--line); }
+    .sbar.h { flex: 1; }
+    .sbar.corner { grid-area: 2 / 2; border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+    .sbar .thumb { position: absolute; border-radius: 6px; background: #3a4157; transition: background .12s; }
+    .sbar.h .thumb { top: 3px; bottom: 3px; min-width: 28px; }
+    .sbar.v .thumb { left: 3px; right: 3px; min-height: 28px; }
+    .sbar .thumb:hover, .sbar .thumb.drag { background: #5b6380; }
+    .sbar.off .thumb { opacity: .35; }
+    .zoomgrp { display: inline-flex; align-items: center; gap: 4px; }
+    .zoomgrp .btn { width: 30px; padding: 0; font-size: 17px; font-weight: 700; }
+    #fitBtn { width: auto; padding: 0 9px; font-size: 12.5px; font-weight: 600; }
+    @media (pointer: coarse) { .tl-area { --sb: 20px; } .sbar .thumb { border-radius: 8px; } }
+    .heads { width: 268px; flex: none; border-right: 1px solid var(--line); background: var(--bg-2); position: relative; z-index: 2; }
+    .heads .ruler-sp { height: 30px; border-bottom: 1px solid var(--line); display: flex; align-items: center; padding: 0 12px; font-size: 11.5px; color: var(--muted); gap: 6px; }
+    .head { height: var(--lane, 96px); border-bottom: 1px solid var(--line); padding: 10px 12px; display: flex; flex-direction: column; gap: 7px; position: relative; }
+    .head::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--c); }
+    .head .nm { font-weight: 650; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .head .ctl { display: flex; align-items: center; gap: 6px; }
+    .head input[type=range] { flex: 1; min-width: 0; }
+    .head .db { font: 11.5px var(--mono); color: var(--muted); width: 50px; text-align: right; }
+    .head .ms { width: 26px; height: 24px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--muted); font: 700 11px var(--font); cursor: pointer; }
+    .head .ms.on.m { background: #5a2330; color: #ffb3bd; border-color: #8a3445; }
+    .head .ms.on.s { background: #5a4a1a; color: #ffd98a; border-color: #8a7230; }
+    .head input[type=number] { height: 24px; width: 74px; padding: 0 6px; font-size: 12px; border-radius: 6px; }
+    .head .mini { height: 24px; padding: 0 7px; font-size: 11.5px; border-radius: 6px; }
+    .scroller { flex: 1; min-width: 0; overflow-x: auto; overflow-y: hidden; position: relative; scrollbar-width: none; overscroll-behavior-x: contain; display: grid; align-items: start; justify-items: start; }
+    /* Zeichenfläche bleibt per „sticky“ stehen – der Browser verschiebt sie beim Scrollen nicht erst mit (kein Flimmern) */
+    .scroller canvas { grid-area: 1 / 1; position: sticky; left: 0; display: block; cursor: text; }
+    .spacer { grid-area: 1 / 1; height: 1px; }
+    .bottom { height: 230px; flex: none; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1.1fr .9fr 1.2fr; background: var(--bg-2); }
+    .head .gwrap { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+    .head .gwrap input[type=range] { width: 100%; margin: 0; }
+    .head canvas.lvl { width: 100%; height: 5px; border-radius: 2px; display: block; background: #0b0d12; }
+    .head { gap: 6px; }
+    #ovrow .ovlabel { padding: 6px 10px 5px; align-items: stretch; }
+    .ovlabel .mmbar-wrap { display: flex; flex-direction: column; gap: 3px; width: 100%; min-height: 0; cursor: pointer; }
+    .ovlabel .mmbar-l { display: flex; align-items: center; justify-content: space-between; font-size: 10.5px; letter-spacing: .05em; line-height: 14px; }
+    .ovlabel .mm-read { font-size: 10.5px; letter-spacing: 0; text-transform: none; color: var(--muted); padding: 0 5px; border-radius: 4px; }
+    .ovlabel .mm-read.clip { background: #5a2330; color: #ffb3bd; }
+    #mmBar { flex: 1 1 0; height: 0; width: 100%; min-height: 12px; max-height: 64px; display: block; }
+    .ovlabel { overflow: hidden; }
+    .bottom .notes { display: flex; flex-direction: column; min-height: 0; }
+    #notes { flex: 1; min-height: 80px; resize: none; font: 13px/1.5 var(--mono); background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+    /* Übersicht über das ganze Projekt */
+    .ovrow { display: flex; height: 46px; transition: height .15s; flex: none; border-bottom: 1px solid var(--line); background: #0b0d12; }
+    .ovlabel { flex: none; border-right: 1px solid var(--line); display: flex; align-items: center; padding: 0 12px; font-size: 11.5px; color: var(--muted); font-weight: 600; letter-spacing: .03em; text-transform: uppercase; background: var(--bg-2); }
+    #ov { flex: 1; min-width: 0; height: 100%; display: block; cursor: pointer; touch-action: none; }
+    .ovpad { flex: none; width: var(--sb, 14px); background: var(--bg-2); border-left: 1px solid var(--line); }
+    /* Kontextmenü */
+    .ctx { position: fixed; z-index: 300; min-width: 220px; background: #1c2130; border: 1px solid var(--line-2); border-radius: 10px; box-shadow: 0 16px 40px rgba(0,0,0,.5); padding: 5px; }
+    .ctx button { display: flex; width: 100%; align-items: center; gap: 10px; padding: 8px 10px; border: 0; background: transparent; color: var(--text); font: 13px var(--font); text-align: left; border-radius: 7px; cursor: pointer; }
+    .ctx button:hover:not(:disabled) { background: #2a3146; }
+    .ctx button:disabled { opacity: .4; cursor: default; }
+    .ctx button.danger { color: #ff8a96; }
+    .ctx button svg { width: 15px; height: 15px; flex: none; }
+    .ctx hr { border: 0; border-top: 1px solid var(--line); margin: 4px 2px; }
+    .ctx .ttl { padding: 6px 10px 4px; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+    .heads .ruler-sp .addtrack { margin-left: auto; width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--panel-2); color: var(--text); cursor: pointer; font: 700 14px var(--font); display: grid; place-items: center; padding: 0; }
+    .head { cursor: default; transition: background .12s; }
+    .head.selected { background: linear-gradient(90deg, rgba(124,140,255,.20), rgba(124,140,255,.08)); box-shadow: inset 0 0 0 1px rgba(124,140,255,.45); }
+    .head.selected .nm { color: #dfe3ff; }
+    #exportBtn.busy { background: linear-gradient(90deg, #5b6cf0 var(--p, 0%), #2a3170 var(--p, 0%)); border-color: #4a58c8; min-width: 150px; justify-content: center; }
+    #exportBtn.busy span { font-variant-numeric: tabular-nums; }
+    .zoomgrp .vzoom { display: inline-flex; gap: 4px; margin-left: 6px; padding-left: 8px; border-left: 1px solid var(--line); }
+    .zoomgrp .vzoom .btn { display: inline-grid; place-items: center; }
+    /* niedrige Spuren: Spurkopf zeigt weniger */
+    .head { overflow: hidden; }
+    .lanes-s .head .info { display: none; }
+    .lanes-xs .head { padding-top: 5px; padding-bottom: 5px; gap: 4px; }
+    .lanes-xs .head .gwrap input[type=range], .lanes-xs .head .db { display: none; }
+    .lanes-xxs .head > div.row:first-of-type > .ms { display: none; }
+    .lanes-xxs .head .nm { font-size: 12px; }
+    .head .cstrip { position: absolute; left: 0; top: 0; bottom: 0; width: 8px; border: 0; padding: 0; background: var(--c); cursor: pointer; z-index: 1; }
+    .head .cstrip:hover { width: 12px; }
+    .head::before { display: none; }
+    .head .info { font-size: 11.5px; gap: 8px; }
+    .gchip { display: inline-flex; align-items: center; gap: 4px; height: 18px; padding: 0 6px; border-radius: 5px; background: color-mix(in srgb, var(--g) 22%, transparent); color: var(--g); font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+    .ctx .sw { width: 14px; height: 14px; border-radius: 4px; display: inline-block; flex: none; }
+    .ctx.colors { min-width: 0; width: 214px; }
+    .ctx .sws { display: grid; grid-template-columns: repeat(7, 24px); gap: 6px; padding: 6px 8px 8px; }
+    .ctx .sws button { width: 24px; height: 24px; border-radius: 6px; padding: 0; border: 2px solid transparent; }
+    .ctx .sws button.cur, .ctx .sws button:hover { border-color: #fff; background-clip: padding-box; }
+    .ctx .custom { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 10px 8px; font-size: 12.5px; color: var(--muted); }
+    .ctx .custom input { width: 40px; height: 26px; padding: 0; border: 0; background: none; }
+    .heads.dropping, .tl-area.dropping { outline: 2px dashed var(--accent); outline-offset: -4px; }
+    .bottom > div { overflow: auto; padding: 14px 18px; }
+    .bottom > div + div { border-left: 1px solid var(--line); }
+    .bottom h3 { font-size: 13px; color: var(--muted); font-weight: 650; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .04em; }
+    .li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+    .li:last-child { border-bottom: 0; }
+    .li .k { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; flex: none; }
+    .li .k svg { width: 13px; height: 13px; }
+    .li a.t { color: var(--text); cursor: pointer; }
+    .kbd { font: 11px var(--mono); padding: 1px 5px; border: 1px solid var(--line-2); border-radius: 4px; color: var(--muted); }
+    .help { font-size: 12px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+    .head .ms.fxb { width: 30px; }
+    .head .ms.fxb.on { background: #263066; color: #b9c2ff; border-color: #4a58c8; }
+    .head .ms.fxb.byp { color: #b9c2ff; border-style: dashed; }
+    .head .ms.env.has { color: #ffd166; }
+    .head .ms.env.on { background: #4a3b12; color: #ffd166; border-color: #8a6d1f; }
+    .fx-power { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+    #fxPanel.fx-off .fx-sec { opacity: .4; pointer-events: none; }
+    #fxPanel { position: fixed; right: 0; top: 60px; bottom: 0; width: 380px; z-index: 40; background: var(--panel); border-left: 1px solid var(--line-2); box-shadow: -20px 0 40px rgba(0,0,0,.35); display: flex; flex-direction: column; }
+    #poolPanel { position: fixed; right: 0; top: 60px; bottom: 0; width: 360px; z-index: 40; background: var(--panel); border-left: 1px solid var(--line-2); box-shadow: -20px 0 40px rgba(0,0,0,.35); display: flex; flex-direction: column; }
+    #poolPanel.dropping { outline: 2px dashed var(--accent); outline-offset: -6px; }
+    #poolBtn.on { background: #263066; border-color: #4a58c8; color: #dfe3ff; }
+    #poolPanel .fx-head h3 svg { width: 18px; height: 18px; color: var(--accent); }
+    .pool-tools { display: flex; gap: 8px; padding: 4px 14px 8px; }
+    .pool-tools input { flex: 1; min-width: 0; height: 32px; }
+    .pool-hint { font-size: 11.5px; color: var(--muted); padding: 0 16px 10px; border-bottom: 1px solid var(--line); line-height: 1.45; }
+    .pool-list { flex: 1; overflow-y: auto; padding: 4px 8px 20px; }
+    .pool-empty { padding: 24px 12px; text-align: center; font-size: 13px; color: var(--muted); line-height: 1.6; }
+    .pool-empty b { color: var(--text); }
+    .pool-cat { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 14px 8px 6px; }
+    .pool-cat span { font-weight: 600; opacity: .7; margin-left: 4px; }
+    .pool-item { display: flex; align-items: center; gap: 8px; padding: 6px 6px; border-radius: 10px; cursor: grab; border: 1px solid transparent; }
+    .pool-item:hover { background: var(--panel-2); border-color: var(--line); }
+    .pool-item.dragging { opacity: .5; }
+    .pool-item .pi-play { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text); display: grid; place-items: center; cursor: pointer; flex: none; padding: 0; }
+    .pool-item .pi-play svg { width: 13px; height: 13px; }
+    .pool-item .pi-play.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .pool-item .pi-main { flex: 1; min-width: 0; }
+    .pool-item .pi-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pool-item .pi-meta { font: 11px var(--mono); color: var(--muted); }
+    .pool-item .btn.sm { height: 28px; }
+    .fx-head { display: flex; align-items: center; gap: 8px; padding: 14px 16px 8px; }
+    .fx-head h3 { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+    .fx-head h3 svg { width: 18px; height: 18px; color: var(--accent); }
+    .fx-tabs { display: flex; gap: 4px; padding: 4px 12px 10px; overflow-x: auto; border-bottom: 1px solid var(--line); flex: none; }
+    .fx-tabs button { height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--muted); font: 600 12.5px var(--font); cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+    .fx-tabs button i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+    .fx-tabs button.active { background: var(--panel-2); color: var(--text); border-color: var(--line-2); }
+    .fx-body { flex: 1; overflow-y: auto; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 14px; }
+    .fx-sec { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+    .fx-sec.off .fx-row, .fx-sec.off .eqc { opacity: .45; }
+    .fx-desc { font-size: 12px; margin-top: -2px; }
+    .fx-row { display: grid; grid-template-columns: 112px 1fr 70px; align-items: center; gap: 8px; font-size: 12.5px; }
+    .fx-row .v { text-align: right; font-size: 11.5px; color: var(--muted); }
+    .fx-row input { width: 100%; }
+    .eqc { width: 100%; height: 100px; border-radius: 8px; border: 1px solid var(--line); }
+    .gr { width: 60px; height: 6px; border-radius: 3px; background: #232838; overflow: hidden; }
+    .gr i { display: block; height: 100%; width: 0; background: var(--warn); float: right; transition: width .08s; }
+    .grv { font-size: 11px; color: var(--warn); width: 54px; text-align: right; }
+    .norm-res { display: grid; grid-template-columns: 1fr auto auto; gap: 6px 14px; font-size: 13px; align-items: center; }
+    .norm-res .mono { text-align: right; }
+    /* Werkzeugleiste: Stufen werden per Script gesetzt, bis alles in eine Zeile passt */
+    .transport.tb1 { gap: 8px; }
+    .transport.tb1 .time { min-width: 0; }
+    .transport.tb1 .sel-info { display: none; }
+    .transport.tb1 #zoom { width: 80px !important; }
+    .transport.tb2 #bypassBtn span, .transport.tb2 #normBtn span { display: none; }
+    .transport.tb2 :is(#bypassBtn, #normBtn) { width: 34px; padding: 0; justify-content: center; }
+    .transport.tb2 #masterBtn { font-size: 0; width: 34px; padding: 0; }
+    .transport.tb2 #masterBtn::before { content: "Σ"; font-size: 15px; }
+    .transport.tb2 .time small { display: none; }
+    .transport.tb3 #splitBtn span, .transport.tb3 #cutBtn span, .transport.tb3 #cutAllBtn span, .transport.tb3 #delBtn span,
+    .transport.tb3 #groupBtn span, .transport.tb3 #muteBtn span, .transport.tb3 #markBtn span { display: none; }
+    .transport.tb3 :is(#splitBtn, #cutBtn, #cutAllBtn, #delBtn, #groupBtn, #muteBtn, #markBtn) { width: 34px; padding: 0; justify-content: center; }
+    .transport.tb4 { gap: 5px; padding-left: 10px; padding-right: 10px; }
+    .transport.tb4 .sep, .transport.tb4 #zoom { display: none; }
+    .transport.tb4 .time { font-size: 15px; }
+    .transport.tb4 .btn.sm { width: 30px; min-width: 30px; padding: 0; }
+    .transport.tb4 #fitBtn { width: auto; padding: 0 7px; }
+    .transport .zoomgrp { display: inline-flex; align-items: center; gap: 6px; }
+    .modal.keys { width: min(860px, 94vw); max-height: 88dvh; overflow: auto; }
+    .keys-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px 28px; }
+    .keys-grid h4 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .keys-grid .kr { display: grid; grid-template-columns: 170px 1fr; gap: 10px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+    .keys-grid .kk { white-space: nowrap; color: var(--text); font-size: 12px; }
+    .keys-grid .kbd { color: var(--text); background: var(--panel-2); }
+    @media (max-width: 760px) { .keys-grid { grid-template-columns: 1fr; } .keys-grid .kr { grid-template-columns: 130px 1fr; } }
+    .help a { color: var(--accent); text-decoration: none; }
+    #loading { position: fixed; inset: 0; display: grid; place-items: center; background: var(--bg); z-index: 50; }
+    @media (max-width: 900px) {
+      .bottom { grid-template-columns: 1fr; height: 200px; } .heads { width: 200px; }
+      #ovrow .ovlabel { padding: 5px 8px 4px; }
+      .bottom .notes { min-height: 180px; }
+      .head > div.row:first-of-type { flex-wrap: wrap; row-gap: 4px; }
+      .head .nm { flex: 1 0 100%; }
+      .head > div.row:first-of-type > a.btn, .head > div.row:first-of-type > [data-a=del], .head > div.row:first-of-type > .badge { display: none; }
+    }
+    .topbar { padding-top: env(safe-area-inset-top); height: calc(60px + env(safe-area-inset-top)); }
+    #cv { touch-action: none; } /* Touch-Gesten (Wischen, Pinch) übernimmt der Editor selbst */
+    #listBtn { display: none; }
+    @media (pointer: coarse) {
+      .help { display: none !important; }
+      input, select { font-size: 16px; }
+      .btn, .ms { touch-action: manipulation; }
+    }
+    @media (max-width: 760px) {
+      .topbar { gap: 6px; padding-left: 8px; padding-right: 8px; }
+      .topbar input.title { width: auto; flex: 1; min-width: 0; font-size: 14px; padding: 0 6px; }
+      .topbar .grow { display: none; }
+      #saveState { display: none; }
+      #liveBadge { max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; line-height: 22px; }
+      #addBtn span, #exportBtn span { display: none; }
+      #addBtn, #exportBtn { width: 36px; padding: 0; }
+      .transport { padding: 8px 10px; gap: 6px; }
+      .transport .time { font-size: 15px; min-width: 0; }
+      .transport .sep, .transport .sel-info { display: none; }
+      #splitBtn span, #cutBtn span, #cutAllBtn span, #delBtn span, #groupBtn span, #muteBtn span, #markBtn span, #bypassBtn span { display: none; }
+      #splitBtn, #cutBtn, #cutAllBtn, #delBtn, #groupBtn, #muteBtn, #markBtn, #bypassBtn, #normBtn { width: 34px; padding: 0; }
+      #normBtn span { display: none; }
+      #masterBtn { font-size: 0; width: 34px; padding: 0; }
+      #masterBtn::before { content: "Σ"; font-size: 15px; }
+      #zoom { display: none; }
+      .playbtn { width: 40px; height: 40px; }
+      .heads { width: 148px; }
+      .head { padding: 6px 8px 6px 10px; gap: 5px; }
+      .head > div.row:first-of-type { flex-wrap: wrap; row-gap: 4px; }
+      .head .nm { flex: 1 0 100%; font-size: 12.5px; }
+      .head > div.row:first-of-type > a.btn, .head > div.row:first-of-type > [data-a=del], .head > div.row:first-of-type > .badge { display: none; }
+      .transport .time small { display: none; }
+      .head .ms { width: 24px; height: 22px; }
+      .head .db { width: 44px; font-size: 10.5px; }
+      .head .ctl span.muted { display: none; }
+      .head input[type=number] { width: 56px; height: 22px; }
+      .head .mini { padding: 0 5px; font-size: 11px; height: 22px; }
+      .bottom { height: 170px; }
+      .bottom > div { padding: 10px 12px; }
+      #fxPanel, #poolPanel { width: 100%; top: calc(60px + env(safe-area-inset-top)); }
+      #poolBtn span { display: none; }
+      #poolBtn { width: 36px; padding: 0; justify-content: center; }
+      .fx-row { grid-template-columns: 96px 1fr 62px; }
+      #listBtn { display: inline-flex; }
+      body:not(.show-list) .bottom { display: none; }
+    }
+    @media (orientation: landscape) and (max-height: 500px) {
+      #ovrow .ovlabel { padding: 5px 8px 4px; }
+      .topbar { height: calc(48px + env(safe-area-inset-top)); }
+      .transport { padding: 6px 10px; }
+      body:not(.show-list) .bottom { display: none; }
+      #listBtn { display: inline-flex; }
+      .bottom { height: 45dvh; position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; box-shadow: 0 -20px 40px rgba(0,0,0,.4); }
+      #fxPanel, #poolPanel { top: calc(48px + env(safe-area-inset-top)); width: min(380px, 70vw); }
+      body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+    }
+  </style>
+</head>
+<body>
+  <div id="loading"><div class="muted">Lade Aufnahme …</div></div>
+  <header class="topbar">
+    <a class="btn ghost icon" href="/" id="backBtn" title="Zurück"></a>
+    <input class="title" id="title" type="text">
+    <span class="badge" id="saveState">Gespeichert</span>
+    <span class="badge warn hidden" id="liveBadge">Upload/Aufnahme läuft noch</span>
+    <div class="grow"></div>
+    <button class="btn sm icon" id="undoBtn" title="Rückgängig (Strg+Z)"></button>
+    <button class="btn sm icon" id="redoBtn" title="Wiederholen (Strg+Umschalt+Z)"></button>
+    <label class="btn sm" id="addBtn" title="Intro, Outro, Jingle …"><input type="file" accept="audio/*" hidden id="addFile" multiple><span></span></label>
+    <button class="btn sm" id="poolBtn" title="Mediapool: Intros, Outros, Jingles, Soundeffekte für alle Projekte"></button>
+    <button class="btn sm icon" id="keysBtn" title="Tastenkürzel (?)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg></button>
+    <button class="btn primary" id="exportBtn"></button>
+  </header>
+  <div class="transport">
+    <button class="btn icon" id="backSkip" title="−5 s (←)"></button>
+    <button class="btn primary playbtn" id="playBtn" title="Abspielen (Leertaste)"></button>
+    <button class="btn icon" id="fwdSkip" title="+5 s (→)"></button>
+    <div class="time" id="time">0:00.0 <small>/ 0:00</small></div>
+    <div class="sep"></div>
+    <button class="btn sm" id="splitBtn" title="Clips an der Abspielposition teilen (S)"></button>
+    <button class="btn sm" id="cutBtn" disabled title="Ripple-Schnitt: Bereich/Clips löschen, Rest der gewählten Spuren rückt nach (Entf)"></button>
+    <button class="btn sm" id="cutAllBtn" disabled title="Ripple-Schnitt über alle Spuren (Umschalt+Entf)"></button>
+    <button class="btn sm" id="delBtn" disabled title="Löschen und Lücke lassen (Strg/Cmd+Entf)"></button>
+    <button class="btn sm" id="groupBtn" disabled title="Ausgewählte Clips gruppieren / Gruppe lösen (Strg+G)"></button>
+    <button class="btn sm" id="muteBtn" disabled title="Bereich in den gewählten Spuren per Hüllkurve stillstellen (M)"></button>
+    <button class="btn sm" id="markBtn" title="Marker an Abspielposition (K)"></button>
+    <button class="btn sm" id="listBtn" title="Bearbeitungen & Exporte anzeigen">Liste</button>
+    <div class="sep"></div>
+    <button class="btn sm" id="bypassBtn"></button>
+    <button class="btn sm" id="masterBtn" title="Limiter auf der Summe">Summe / Limiter</button>
+    <button class="btn sm" id="normBtn" title="Spuren auf gleiche Lautheit bringen"></button>
+    <span class="sel-info" id="selInfo"></span>
+    <span class="zoomgrp">
+      <button class="btn sm" id="zoomOut" title="Verkleinern (−)">−</button>
+      <input type="range" id="zoom" min="0" max="1000" value="300" style="width:130px" title="Zoom (Strg+Mausrad, Pinch)">
+      <button class="btn sm" id="zoomIn" title="Vergrößern (+)">+</button>
+      <button class="btn sm" id="fitBtn" title="Ganze Aufnahme anzeigen (0)">Alles</button>
+      <span class="vzoom">
+        <button class="btn sm" id="vZoomOut" title="Spuren niedriger (Alt/Option+Mausrad) · Doppelklick = Standard"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16M4 15h16"/><path d="M12 2v4m-2-2 2 2 2-2M12 22v-4m-2 2 2-2 2 2"/></svg></button>
+        <button class="btn sm" id="vZoomIn" title="Spuren höher (Alt/Option+Mausrad) · Doppelklick = Standard"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 18h16"/><path d="M12 9V15m-2-4 2-2 2 2m-4 2 2 2 2-2"/></svg></button>
+      </span>
+    </span>
+  </div>
+  <div class="ovrow" id="ovrow">
+    <div class="ovlabel" id="ovlabel" title="Gesamtübersicht – klicken oder ziehen zum Navigieren, Doppelklick setzt den Abspielkopf"><span class="mmbar-wrap" id="mmBox" title="Summenpegel L/R nach dem Limiter · Klick setzt die Übersteuerungsanzeige zurück"><span class="mmbar-l"><span>Summe</span><span class="mm-read mono" id="mmRead">−∞</span></span><canvas id="mmBar"></canvas></span></div>
+    <canvas id="ov"></canvas>
+    <div class="ovpad"></div>
+  </div>
+  <div class="tl-area">
+  <div class="tl-wrap" id="tlWrap">
+    <div class="heads" id="heads"><div class="ruler-sp"></div></div>
+    <div class="scroller" id="scroller"><div class="spacer" id="spacer"></div><canvas id="cv"></canvas></div>
+  </div>
+  <div class="sbar v" id="vbar"><div class="thumb"></div></div>
+  <div class="hrow"><div class="hpad" id="hpad"></div><div class="sbar h" id="hbar"><div class="thumb"></div></div></div>
+  <div class="sbar corner"></div>
+  </div>
+  <div class="bottom">
+    <div>
+      <h3>Bearbeitungen</h3>
+      <div id="edits"></div>
+      <div class="help"><a href="#" id="keysLink">Alle Tastenkürzel anzeigen</a> <span class="kbd">?</span></div>
+    </div>
+    <div>
+      <h3>Exporte</h3>
+      <div id="exports"></div>
+    </div>
+    <div class="notes">
+      <div class="row" style="gap:8px;margin-bottom:8px"><h3 class="grow" style="margin:0">Notizen</h3>
+        <span class="muted" id="notesState" style="font-size:11.5px"></span>
+        <button class="btn sm" id="tsBtn" title="Aktuelle Abspielposition als Zeitstempel einfügen">⏱ Zeit einfügen</button></div>
+      <textarea id="notes" spellcheck="true" placeholder="Editing-Notizen, z. B.&#10;[12:34] Versprecher rausschneiden&#10;[25:10] Lacher lauter&#10;&#10;Doppelklick auf einen Zeitstempel springt dorthin."></textarea>
+    </div>
+  </div>
+  <aside id="fxPanel" class="hidden"></aside>
+  <aside id="poolPanel" class="hidden"></aside>
+  <script type="module" src="/js/editor.js"></script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+# Builds the ZimaOS / CasaOS app store (folder appstore/) and publishes it to the gh-pages branch.
+# Store address for ZimaOS: https://cdn.jsdelivr.net/gh/Schnubbirunkel/Remote-Booth@gh-pages/store.json
+name: App store
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+  pull_request:
+    paths: ["appstore/**"]
+
+permissions:
+  contents: write
+
+jobs:
+  store:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build store (v2)
+        uses: IceWhaleTech/build-appstore-action@v1
+        with:
+          source: appstore
+          output: dist
+          base-url: https://cdn.jsdelivr.net/gh/${{ github.repository }}@gh-pages
+          cache-file: .cache/build_appstore/image-size-cache.json
+          digest-cache-file: .cache/build_appstore/image-digest-cache.json
+
+      - name: Publish to gh-pages
+        if: github.event_name != 'pull_request'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./dist
+
+      # jsDelivr caches gh-pages for up to 12 h – ask it to refresh the store files right away
+      - name: Refresh CDN cache
+        if: github.event_name != 'pull_request'
+        run: |
+          for f in store.json index.json store.de_DE.json index.de_DE.json; do
+            curl -fsS "https://purge.jsdelivr.net/gh/${{ github.repository }}@gh-pages/$f" >/dev/null || true
+          done

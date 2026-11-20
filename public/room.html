@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d0f14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Aufnahmeraum · Remote Booth</title>
+  <link rel="icon" href="/favicon.svg">
+  <link rel="stylesheet" href="/css/app.css">
+  <link rel="stylesheet" href="/css/room.css">
+</head>
+<body class="room">
+  <!-- Vorraum: Geräte prüfen -->
+  <section id="lobby">
+    <div class="lobby-grid">
+      <div class="col">
+        <div class="preview" id="pvBox">
+          <video id="pv" autoplay playsinline muted></video>
+          <div class="nocam hidden" id="pvNoCam">Kamera aus</div>
+          <div class="meter"><i id="pvMeter"></i></div>
+          <span class="badge" id="pvRes" style="position:absolute;top:12px;right:12px;background:rgba(10,12,18,.72)"></span>
+        </div>
+        <div class="hint">🎧 <b>Kopfhörer verwenden.</b> Jede Person wird lokal in voller Qualität als eigene MP3-Spur aufgenommen – die Qualität des Videocalls spielt für die Aufnahme keine Rolle.</div>
+      </div>
+      <div class="card col" style="gap:14px">
+        <div>
+          <div class="row" style="align-items:center"><div class="muted grow" style="font-size:12.5px;font-weight:600">AUFNAHMERAUM</div><span data-lang-picker></span></div>
+          <h1 id="roomTitle" translate="no">…</h1>
+        </div>
+        <label class="field">Dein Name<input type="text" id="nameIn" maxlength="60" placeholder="z. B. Anna"></label>
+        <label class="field">Mikrofon<select id="micSel"></select></label>
+        <label class="field">Kamera<select id="camSel"></select></label>
+        <div class="row" style="gap:12px">
+          <label class="field grow">Videoauflösung<select id="vresSel">
+            <option value="480">480p</option><option value="720">720p</option><option value="1080">1080p (Full HD)</option>
+            <option value="1440">1440p</option><option value="2160">4K (2160p)</option></select></label>
+          <label class="field grow">Bildrate<select id="vfpsSel">
+            <option value="24">24 fps</option><option value="25">25 fps</option><option value="30">30 fps</option>
+            <option value="50">50 fps</option><option value="60">60 fps</option></select></label>
+        </div>
+        <label class="check" style="font-size:13px"><span class="switch"><input type="checkbox" id="optEco"><span></span></span>Energiesparmodus – Video max. 720p / 24 fps (empfohlen am Laptop im Akkubetrieb)</label>
+        <label class="check" style="font-size:13px"><span class="switch"><input type="checkbox" id="optMirror"><span></span></span>Eigenes Kamerabild spiegeln (nur für dich – dein Partner sieht dich immer seitenrichtig)</label>
+        <div class="row wrap" style="gap:16px">
+          <label class="check"><span class="switch"><input type="checkbox" id="optEc"><span></span></span>Echounterdrückung</label>
+          <label class="check"><span class="switch"><input type="checkbox" id="optNs"><span></span></span>Rauschfilter</label>
+          <label class="check"><span class="switch"><input type="checkbox" id="optAgc"><span></span></span>Auto-Pegel</label>
+        </div>
+        <label class="field">MP3-Qualität der Aufnahme
+          <select id="bitrateSel">
+            <option value="128">128 kbit/s (Mono – sehr gut für Sprache)</option>
+            <option value="192" selected>192 kbit/s (Mono – Studioqualität)</option>
+            <option value="256">256 kbit/s (Mono – maximal)</option>
+          </select>
+        </label>
+        <div class="col" style="gap:8px">
+          <div class="row">
+            <button class="btn grow" id="backupBtn"></button>
+          </div>
+          <label class="check" style="font-size:13px"><span class="switch"><input type="checkbox" id="optAutoDl"><span></span></span>Nach jeder Aufnahme Backup-MP3 automatisch herunterladen</label>
+          <div class="muted" style="font-size:12px" id="backupHint"></div>
+        </div>
+        <button class="btn primary" id="joinBtn" style="height:46px;font-size:15px">Raum betreten</button>
+        <div class="muted" id="verInfo" style="font-size:11.5px;text-align:center"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Studio -->
+  <section id="studio" class="hidden">
+    <header class="topbar">
+      <a class="brand" href="/" id="homeLink" title="Übersicht"></a>
+      <div class="muted">/</div>
+      <div style="font-weight:600" id="roomName" translate="no"></div>
+      <span class="badge rec hidden" id="recBadge"><span class="dot pulse"></span><span class="hide-xs">AUFNAHME</span><span class="mono" id="recBadgeTime"></span></span>
+      <span class="badge warn hidden" id="connBadge">Verbindung zum Server unterbrochen – Aufnahme läuft lokal weiter</span>
+      <div class="grow"></div>
+      <button class="btn sm" id="inviteBtn"></button>
+    </header>
+    <main id="stage"><div id="floatRec" class="badge rec hidden"><span class="dot"></span><span class="mono" id="floatTime">0:00</span><span id="floatUp"></span></div></main>
+    <aside id="side">
+      <div class="tabs">
+        <button data-tab="people" class="active">Teilnehmer</button>
+        <button data-tab="chat">Chat</button>
+        <button data-tab="backups">Backups</button>
+        <button class="side-close" id="sideClose" title="Schließen" aria-label="Schließen"></button>
+      </div>
+      <div class="tabpane" data-pane="people"><div id="peopleList"></div>
+        <div class="hint" style="margin-top:14px">Kacheln lassen sich frei <b>verschieben</b> (ziehen) und an den Ecken <b>vergrößern</b>. Doppelklick = Vollbild-Kachel.</div>
+      </div>
+      <div class="tabpane hidden" data-pane="chat" style="display:flex;flex-direction:column;padding:0">
+        <div id="chatLog" style="flex:1;overflow:auto;padding:14px"></div>
+        <form class="chat-input" id="chatForm"><button type="button" class="btn icon" id="attachBtn" title="Datei teilen (oder hierher ziehen)"></button><input type="file" id="chatFile" multiple hidden><input type="text" id="chatIn" placeholder="Nachricht oder Datei hierher ziehen …" autocomplete="off"><button class="btn primary sm" style="height:38px">Senden</button></form>
+      </div>
+      <div class="tabpane hidden" data-pane="backups">
+        <div class="muted" style="font-size:12.5px;margin-bottom:12px">Lokale Sicherungen in diesem Browser. Sie bleiben erhalten, bis du sie löschst – auch wenn der Upload fehlschlägt.</div>
+        <div class="rec-list" id="backupList"></div>
+        <div class="muted" style="font-size:12px;margin-top:12px" id="storageInfo"></div>
+      </div>
+    </aside>
+    <footer id="dock">
+      <div class="left">
+        <span class="timer" id="timer">0:00</span>
+        <span class="badge hidden-sm" id="uploadBadge" style="display:none"></span>
+      </div>
+      <button class="btn dockbtn" id="micBtn" title="Mikrofon (M)"></button>
+      <button class="btn dockbtn" id="camBtn" title="Kamera (V)"></button>
+      <button class="btn" id="recBtn"></button>
+      <button class="btn dockbtn" id="screenBtn" title="Bildschirm teilen"></button>
+      <button class="btn dockbtn" id="markerBtn" title="Marker setzen (K)" disabled></button>
+      <button class="btn dockbtn" id="layoutBtn" title="Kacheln neu anordnen"></button>
+      <div class="right">
+        <button class="btn dockbtn hide-sm" id="settingsBtn" title="Geräte"></button>
+        <button class="btn dockbtn" id="sideBtn" title="Seitenleiste"></button>
+        <button class="btn dockbtn danger" id="leaveBtn" title="Verlassen"></button>
+      </div>
+    </footer>
+  </section>
+  <script type="module" src="/js/room.js"></script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+/* Aufnahmeraum */
+body.room { overflow: hidden; }
+
+/* ---- Lobby ---- */
+#lobby { min-height: 100%; display: grid; place-items: center; padding: 32px 20px; overflow: auto; height: 100%; }
+.lobby-grid { width: min(1040px, 100%); display: grid; grid-template-columns: 1.25fr 1fr; gap: 22px; }
+@media (max-width: 860px) { .lobby-grid { grid-template-columns: 1fr; } }
+.preview { position: relative; aspect-ratio: 16/9; background: #07080c; border-radius: 18px; overflow: hidden; border: 1px solid var(--line); }
+.preview video { width: 100%; height: 100%; object-fit: cover; }
+.preview.mirror video { transform: scaleX(-1); }
+.preview .meter { position: absolute; left: 16px; right: 16px; bottom: 16px; height: 8px; background: rgba(0, 0, 0, .45); }
+.preview .nocam { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); }
+.lobby-grid .card h1 { font-size: 22px; }
+.hint { font-size: 12.5px; color: var(--muted); background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.hint b { color: var(--text); }
+
+/* ---- Studio ---- */
+#studio { position: fixed; inset: 0; display: grid; grid-template-rows: 60px 1fr 84px; grid-template-columns: 1fr auto; }
+#studio .topbar { grid-column: 1 / -1; position: relative; }
+#stage { position: relative; overflow: hidden; background:
+  radial-gradient(1200px 600px at 30% 0%, rgba(124, 140, 255, .07), transparent 60%),
+  radial-gradient(900px 500px at 90% 100%, rgba(255, 77, 94, .05), transparent 60%), var(--bg); }
+#side { width: 340px; border-left: 1px solid var(--line); background: var(--bg-2); display: flex; flex-direction: column; min-height: 0; }
+#side.closed { display: none; }
+.tabs { display: flex; gap: 4px; padding: 10px; border-bottom: 1px solid var(--line); }
+.tabs button { flex: 1; height: 32px; border-radius: 8px; border: 0; background: transparent; color: var(--muted); font: 600 13px var(--font); cursor: pointer; }
+.tabs button.active { background: var(--panel-2); color: var(--text); }
+.tabpane { flex: 1; min-height: 0; overflow: auto; padding: 14px; }
+#chatLog { display: flex; flex-direction: column; gap: 10px; }
+.msg .who { font-size: 12px; color: var(--muted); font-weight: 600; }
+.msg .txt { background: var(--panel); border: 1px solid var(--line); padding: 8px 10px; border-radius: 10px; margin-top: 3px; white-space: pre-wrap; word-break: break-word; }
+.msg.me .txt { background: #232a4a; border-color: #333e6e; }
+.chat-input { padding: 10px; border-top: 1px solid var(--line); display: flex; gap: 8px; }
+.chat-input input { flex: 1; }
+
+.rec-list { display: flex; flex-direction: column; gap: 10px; }
+.rec-item { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.rec-item .title { font-weight: 600; font-size: 13px; }
+.rec-item .sub { font-size: 12px; color: var(--muted); }
+.part { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.part:last-child { border-bottom: 0; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff; flex: none; }
+
+/* ---- Video-Kacheln (frei verschieb- und skalierbar) ---- */
+.tile {
+  position: absolute; border-radius: 16px; overflow: hidden; background: #0a0c11;
+  border: 2px solid var(--line); box-shadow: 0 12px 34px rgba(0, 0, 0, .45);
+  touch-action: none; user-select: none; isolation: isolate;
+  min-width: 160px; min-height: 100px; cursor: grab;
+}
+.tile.dragging { cursor: grabbing; box-shadow: 0 20px 50px rgba(0, 0, 0, .6); }
+.tile.anim { transition: left .25s ease, top .25s ease, width .25s ease, height .25s ease, border-color .15s; }
+/* Sprechanzeige als eigene Ebene über dem Video – die Kachel selbst wird dabei nicht neu gezeichnet */
+.tile::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 3px solid var(--ok); opacity: 0; transition: opacity .12s; pointer-events: none; z-index: 1; }
+.tile.speaking::after { opacity: 1; }
+.tile video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; background: #0a0c11; }
+.tile.contain video { object-fit: contain; }
+.tile.local.mirror video { transform: scaleX(-1); }
+.tile .ph { position: absolute; inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 40%, #1c2131, #0a0c11); }
+.tile .ph .avatar { width: 84px; height: 84px; font-size: 30px; }
+.tile .label {
+  position: absolute; left: 10px; bottom: 10px; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 20px);
+  background: rgba(10, 12, 18, .82); padding: 5px 10px; border-radius: 9px; font-weight: 600; font-size: 13px; z-index: 2;
+}
+.tile .label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tile .label svg { width: 15px; height: 15px; color: #ff8a96; flex: none; }
+.tile .label .lvl { width: 34px; height: 4px; border-radius: 3px; background: rgba(255, 255, 255, .15); overflow: hidden; flex: none; }
+.tile .label .lvl i { display: block; height: 100%; width: 0; background: var(--ok); }
+.tile .tl { position: absolute; left: 10px; top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+.tile .tl { z-index: 2; }
+.tile .tl .badge { background: rgba(10, 12, 18, .82); }
+.tile .dot.pulse { animation: none; }
+.tile .tl .badge.rec { background: rgba(120, 20, 32, .75); }
+.tile .tl .badge.ok { background: rgba(10, 60, 40, .75); }
+.tile .tools { position: absolute; right: 8px; top: 8px; display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+.tile:hover .tools { opacity: 1; }
+.tile .tools button { width: 28px; height: 28px; border-radius: 8px; border: 0; background: rgba(10, 12, 18, .72); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.tile .tools button:hover { background: rgba(40, 46, 66, .9); }
+.tile .tools svg { width: 15px; height: 15px; }
+.tile .rz { position: absolute; width: 22px; height: 22px; z-index: 2; }
+.tile .rz.se { right: 0; bottom: 0; cursor: nwse-resize; }
+.tile .rz.sw { left: 0; bottom: 0; cursor: nesw-resize; }
+.tile .rz.ne { right: 0; top: 0; cursor: nesw-resize; }
+.tile .rz.nw { left: 0; top: 0; cursor: nwse-resize; }
+.tile .rz.se::after { content: ""; position: absolute; right: 5px; bottom: 5px; width: 10px; height: 10px; border-right: 2px solid rgba(255, 255, 255, .55); border-bottom: 2px solid rgba(255, 255, 255, .55); border-radius: 0 0 4px 0; opacity: 0; transition: opacity .15s; }
+.tile:hover .rz.se::after { opacity: 1; }
+.tile .conn { position: absolute; inset: auto 0 50% 0; text-align: center; color: var(--muted); font-size: 13px; transform: translateY(50%); pointer-events: none; }
+
+/* ---- Steuerleiste ---- */
+#dock { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 10px; border-top: 1px solid var(--line); background: var(--bg-2); padding: 0 16px; position: relative; }
+#dock .left, #dock .right { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; gap: 10px; }
+#dock .left { left: 16px; } #dock .right { right: 16px; }
+.dockbtn { width: 48px; height: 48px; border-radius: 14px; }
+.dockbtn svg { width: 21px; height: 21px; }
+.dockbtn.off { background: #3a1820; border-color: #6d2733; color: #ff8a96; }
+#recBtn { height: 52px; padding: 0 22px 0 18px; border-radius: 16px; font-size: 15px; background: var(--rec); border-color: var(--rec); color: #fff; gap: 10px; min-width: 170px; }
+#recBtn:hover { filter: brightness(1.08); }
+#recBtn.recording { background: #2b1418; border-color: var(--rec); color: #ff8a96; }
+#recBtn svg { width: 20px; height: 20px; }
+.timer { font: 600 15px var(--mono); font-variant-numeric: tabular-nums; }
+@media (max-width: 800px) {
+  #side { position: absolute; right: 0; top: 60px; bottom: 84px; z-index: 30; width: min(340px, 100%); }
+  #dock .left .hide-sm, #dock .right .hide-sm { display: none; }
+}
+#pvRes:empty { display: none; }
+
+/* Kein Weichzeichner/Animation in der Studio-Ansicht (verursacht in manchen Browsern Video-Flackern) */
+#studio .topbar { backdrop-filter: none; background: var(--bg); }
+#studio .badge .dot.pulse { animation: none; }
+.tile video { backface-visibility: hidden; }
+
+/* Dateien im Chat */
+.msg .file { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-top: 3px; }
+.msg.me .file { background: #232a4a; border-color: #333e6e; }
+.msg .file img { display: block; max-width: 100%; max-height: 220px; border-radius: 8px; margin-bottom: 8px; object-fit: contain; background: #0a0c11; }
+.msg .file audio, .msg .file video { width: 100%; margin-bottom: 8px; border-radius: 8px; }
+.msg .file .fn { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg .file .ext { width: 38px; height: 38px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--line-2); display: grid; place-items: center; font: 700 10px var(--font); color: var(--muted); flex: none; }
+.msg.failed .file { border-color: #7a2a35; }
+.msg .txt a { color: #b9c2ff; text-decoration: underline; }
+#side.dropping { outline: 2px dashed var(--accent); outline-offset: -8px; }
+#side.dropping .tabpane[data-pane=chat] { background: rgba(124, 140, 255, .06); }
+/* Bildschirmfreigabe */
+.tile.screen { background: #000; }
+.tile.screen video { object-fit: contain; }
+#screenBtn.on { background: #263066; border-color: var(--accent); color: #b9c2ff; }
+
+/* ===================== Mobilgeräte ===================== */
+.side-close { display: none; flex: 0 0 36px !important; }
+.side-close svg { width: 18px; height: 18px; }
+#floatRec { position: absolute; left: 50%; transform: translateX(-50%); top: 10px; z-index: 50; display: none; gap: 6px; background: rgba(60, 12, 20, .9); }
+#floatRec .dot { color: var(--rec); }
+#floatRec.hidden { display: none !important; }
+.tile.main { border-radius: 14px; }
+.tile.pip { border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, .55); }
+.tile.pip .label { left: 6px; bottom: 6px; padding: 3px 7px; font-size: 11.5px; gap: 5px; }
+.tile.pip .label .lvl { width: 20px; }
+.tile.pip .tl, .tile.pip .tools { display: none; }
+
+/* Touch: keine Hover-Effekte, keine Ecken zum Vergrößern, kein Doppeltipp-Zoom */
+@media (pointer: coarse) {
+  .tile .rz { display: none; }
+  .tile .tools { opacity: .85; }
+  .btn, .tabs button, .tile { touch-action: manipulation; }
+  input[type=text], input[type=password], input[type=number], select, textarea { font-size: 16px; } /* verhindert Auto-Zoom in iOS */
+}
+
+/* Schmale Bildschirme (Handy hochkant, kleine Tablets) */
+@media (max-width: 760px) {
+  #lobby { padding: 12px 12px calc(16px + env(safe-area-inset-bottom)); place-items: start center; }
+  .lobby-grid { gap: 12px; }
+  .lobby-grid .card { padding: 16px; }
+  .preview { border-radius: 14px; aspect-ratio: 4 / 3; }
+
+  #studio { grid-template-rows: calc(52px + env(safe-area-inset-top)) 1fr calc(70px + env(safe-area-inset-bottom)); }
+  #studio .topbar { height: auto; padding: env(safe-area-inset-top) 10px 0; gap: 8px; }
+  #studio .topbar .brand span:not(.logo), #studio .topbar .muted { display: none; }
+  #roomName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+  #inviteBtn span { display: none; }
+  #inviteBtn { width: 36px; padding: 0; }
+  #connBadge { position: absolute; left: 8px; right: 8px; top: calc(100% + 6px); z-index: 60; white-space: normal; height: auto; padding: 6px 8px; }
+  .hide-xs { display: none; }
+
+  #stage { padding: 0; }
+  #dock { padding: 0 8px env(safe-area-inset-bottom); gap: 6px; justify-content: space-evenly; }
+  #dock .left { display: none; }
+  #dock .right { position: static; gap: 6px; }
+  #layoutBtn, #screenBtn, #settingsBtn.hide-sm { display: none; }
+  #settingsBtn { display: inline-flex !important; }
+  .dockbtn { width: 44px; height: 44px; border-radius: 12px; }
+  .dockbtn svg { width: 20px; height: 20px; }
+  #recBtn { min-width: 0; width: 56px; height: 56px; padding: 0; border-radius: 50%; }
+  #recBtn .lbl { display: none; }
+  #recBtn svg { width: 24px; height: 24px; }
+
+  /* Seitenleiste als Vollbild-Blatt */
+  #side { position: fixed; inset: calc(52px + env(safe-area-inset-top)) 0 calc(70px + env(safe-area-inset-bottom)) 0; width: auto; z-index: 40; border-left: 0; }
+  .side-close { display: grid; place-items: center; }
+  .chat-input { padding-bottom: 10px; }
+  #toasts { bottom: calc(84px + env(safe-area-inset-bottom)); }
+  .modal { padding: 18px; border-radius: 16px; max-height: 85dvh; }
+  .modal-back { padding: 10px; align-items: end; }
+}
+
+/* Handy quer: keine Kopfzeile, Bedienleiste senkrecht rechts – maximale Fläche fürs Bild */
+@media (orientation: landscape) and (max-height: 500px) {
+  #lobby { place-items: start center; padding: 10px calc(10px + env(safe-area-inset-right)) 10px calc(10px + env(safe-area-inset-left)); }
+  .lobby-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .preview { aspect-ratio: 16 / 9; }
+  .lobby-grid .hint { display: none; }
+  .lobby-grid .card { padding: 14px; gap: 10px !important; }
+
+  #studio { grid-template-rows: 1fr; grid-template-columns: 1fr auto calc(66px + env(safe-area-inset-right)); }
+  #studio .topbar { display: none; }
+  #stage { grid-column: 1; grid-row: 1; margin-left: env(safe-area-inset-left); }
+  #side { position: fixed; inset: 0 calc(66px + env(safe-area-inset-right)) 0 auto; width: min(380px, 60vw); z-index: 40; border-left: 1px solid var(--line); }
+  .side-close { display: grid; place-items: center; }
+  #dock { grid-column: 3; grid-row: 1; flex-direction: column; border-top: 0; border-left: 1px solid var(--line); padding: 8px env(safe-area-inset-right) 8px 0; gap: 6px; justify-content: center; }
+  #dock .left { display: none; }
+  #dock .right { position: static; flex-direction: column; gap: 6px; }
+  #layoutBtn, #screenBtn { display: none; }
+  #settingsBtn { display: inline-flex !important; }
+  .dockbtn { width: 42px; height: 42px; border-radius: 12px; }
+  .dockbtn svg { width: 19px; height: 19px; }
+  #recBtn { min-width: 0; width: 52px; height: 52px; padding: 0; border-radius: 50%; order: -1; }
+  #recBtn .lbl { display: none; }
+  #floatRec { display: inline-flex; }
+  #toasts { bottom: 14px; }
+  .modal-back { align-items: center; }
+  .modal { max-height: 92dvh; }
+}
+
+/* Tablet hochkant: Seitenleiste als Blatt, Video groß */
+@media (min-width: 761px) and (max-width: 1100px) and (orientation: portrait) {
+  #side { position: absolute; right: 0; top: 60px; bottom: 84px; z-index: 30; width: min(380px, 60vw); box-shadow: -20px 0 40px rgba(0,0,0,.35); }
+  .side-close { display: grid; place-items: center; }
+}

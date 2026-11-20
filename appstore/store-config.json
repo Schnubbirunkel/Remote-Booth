@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "store_id": "remote-booth",
+  "name": {
+    "en_US": "Remote Booth",
+    "de_DE": "Remote Booth"
+  },
+  "description": {
+    "en_US": "Self-hosted remote podcast studio: record guests as separate tracks, edit and export in the browser.",
+    "de_DE": "Selbst gehostetes Podcast-Studio: Gäste als eigene Spuren aufnehmen, im Browser schneiden und exportieren."
+  },
+  "maintainer": "Schnubbirunkel",
+  "url": "https://github.com/Schnubbirunkel/Remote-Booth"
+}
