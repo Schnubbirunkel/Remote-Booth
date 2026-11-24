@@ -143,7 +143,7 @@ public/js/dsp-core.js    gate, EQ, compressor, limiter, loudness meter – share
 public/                  interface (no build step, no external CDNs)
 ```
 
-Releases: raise the version in `package.json` (and `appstore/Apps/RemoteBooth/docker-compose.yml`) and push to `main` → GitHub Actions builds the multi-arch image (`ghcr.io/schnubbirunkel/remote-booth:<version>` and `:latest`) and publishes the app store to the `gh-pages` branch.
+Releases: raise `version` in `package.json`, update `RELEASE_NOTES.md` and push to `main` → GitHub Actions builds the multi-arch image (`ghcr.io/schnubbirunkel/remote-booth:<version>` and `:latest`), publishes the app store to the `gh-pages` branch and creates the GitHub release `v<version>`.
 
 ## Licence
 

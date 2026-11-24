@@ -1,7 +1,7 @@
 name: remote-booth
 services:
   remote-booth:
-    image: ghcr.io/schnubbirunkel/remote-booth:1.0.0
+    image: ghcr.io/schnubbirunkel/remote-booth:1.0.1
     container_name: remote-booth
     restart: unless-stopped
     network_mode: bridge
@@ -82,7 +82,7 @@ x-casaos:
     - https://cdn.jsdelivr.net/gh/Schnubbirunkel/Remote-Booth@main/docs/effects-en.png
     - https://cdn.jsdelivr.net/gh/Schnubbirunkel/Remote-Booth@main/docs/dashboard-en.png
   category: Media
-  version: "1.0.0"
+  version: "1.0.1"
   architectures:
     - amd64
     - arm64
@@ -117,5 +117,5 @@ x-casaos:
       de_DE: |
         Nach der Installation die App öffnen: Die Einrichtung fragt nach Passwort, Sprache und Speicherorten. Gäste außerhalb deines Netzes brauchen eine HTTPS-Adresse für Kamera und Mikrofon.
   release_notes:
-    en_US: First public release.
-    de_DE: Erste öffentliche Version.
+    en_US: Screen sharing at 30 fps (15 fps in power-saving mode) with higher bitrate, H.264 hardware encoding where available, and an info badge showing resolution, fps, codec and hardware/software encoding.
+    de_DE: Bildschirmübertragung mit 30 fps (Energiesparmodus 15 fps) und höherer Bitrate, H.264-Hardwarekodierung wo verfügbar, und eine Anzeige mit Auflösung, fps, Codec und Hardware-/Softwarekodierung.

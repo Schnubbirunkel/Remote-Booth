@@ -139,6 +139,8 @@ async function applyVideoQuality() {
   const c = videoConstraints();
   delete c.deviceId;
   try { await t.applyConstraints(c); } catch (e) { console.warn(e); }
+  const st = screenStream?.getVideoTracks()[0];
+  if (st) { try { await st.applyConstraints({ frameRate: { ideal: screenFps(), max: screenFps() } }); } catch { /* egal */ } }
   for (const p of peers.values()) { await tuneVideoSender(p.videoSender); await tuneScreenSender(p.screenSender); }
   updateCamInfo();
 }
@@ -574,6 +576,7 @@ function addTile(key, { name, local, stream, screen }) {
       ${local && !screen ? `<button data-a="mirror" title="Eigenes Bild spiegeln an/aus">⇋</button>` : ''}
       <button data-a="fit" title="Ganzes Bild / Ausfüllen">${icon.maximize}</button>
     </div>
+    ${local && screen ? '<div class="sinfo hidden"></div>' : ''}
     <div class="label"><span class="nm"></span><b class="micoff hidden">${icon.micOff}</b><div class="lvl"><i></i></div></div>
     <div class="rz nw" data-c="nw"></div><div class="rz ne" data-c="ne"></div><div class="rz sw" data-c="sw"></div><div class="rz se" data-c="se"></div>`;
   $('#stage').appendChild(el);
@@ -1168,14 +1171,17 @@ function screenLayout() {
   layoutTiles(true);
 }
 
+const screenFps = () => (prefs.eco ? 15 : 30);
 async function tuneScreenSender(sender) {
   if (!sender?.track) return;
   try {
     const prm = sender.getParameters();
     if (!prm.encodings?.length) return;
-    prm.encodings[0].maxBitrate = prefs.eco ? 1.2e6 : 2.5e6;
-    prm.encodings[0].maxFramerate = prefs.eco ? 8 : 15;
-    prm.degradationPreference = 'maintain-resolution'; // Text soll scharf bleiben
+    // 30 fps für flüssige Bewegungen (Videos, Scrollen); im Energiesparmodus 15 fps
+    prm.encodings[0].maxBitrate = prefs.eco ? 1.5e6 : 6e6;
+    prm.encodings[0].maxFramerate = screenFps();
+    prm.encodings[0].scaleResolutionDownBy = 1;
+    prm.degradationPreference = 'maintain-resolution'; // Text soll scharf bleiben – bei Engpass lieber weniger fps
     await sender.setParameters(prm);
   } catch (e) { console.warn('Bildschirm-Parameter', e); }
 }
@@ -1183,7 +1189,7 @@ async function tuneScreenSender(sender) {
 async function startScreen() {
   try {
     screenStream = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: { ideal: prefs.eco ? 8 : 15, max: 30 }, width: { max: 2560 }, height: { max: 1440 } },
+      video: { frameRate: { ideal: screenFps(), max: screenFps() }, width: { max: 2560 }, height: { max: 1440 } },
       audio: false,
     });
   } catch (e) {
@@ -1193,16 +1199,46 @@ async function startScreen() {
   }
   const track = screenStream.getVideoTracks()[0];
   try { track.contentHint = 'detail'; } catch { /* egal */ }
+  try { await track.applyConstraints({ frameRate: { ideal: screenFps(), max: screenFps() } }); } catch { /* egal */ }
   track.addEventListener('ended', () => stopScreen()); // „Freigabe beenden“ im Browser
   sendStatus(); // erst ankündigen, dann Spur senden → Partner ordnet sie richtig zu
   addTile('me:screen', { name: 'Dein Bildschirm', local: true, screen: true, stream: screenStream });
   for (const p of peers.values()) if (p.tracksAdded) p.addScreen();
   screenLayout();
   renderScreenBtn();
+  clearInterval(screenInfoTimer); screenInfoTimer = setInterval(updateScreenInfo, 2000); updateScreenInfo();
+}
+
+// Anzeige auf der eigenen Bildschirm-Kachel: Auflösung, tatsächliche fps, Codec und ob die Grafikhardware kodiert
+let screenInfoTimer = null;
+const HW_ENC = /videotoolbox|mediafoundation|accelerator|vaapi|nvenc|qsv|amf|v4l2|mediacodec|external/i;
+async function updateScreenInfo() {
+  const tile = tiles.get('me:screen');
+  if (!screenStream || !tile) return;
+  const st = screenStream.getVideoTracks()[0]?.getSettings() || {};
+  let txt = st.width ? `${st.width}×${st.height} · ${Math.round(st.frameRate || 0)} fps` : '';
+  const sender = [...peers.values()].map(p => p.screenSender).find(Boolean);
+  if (sender) {
+    try {
+      const stats = await sender.getStats();
+      const codecs = {}; let out = null;
+      stats.forEach(r => { if (r.type === 'codec') codecs[r.id] = r.mimeType; if (r.type === 'outbound-rtp' && r.kind === 'video') out = r; });
+      if (out) {
+        if (out.frameWidth) txt = `${out.frameWidth}×${out.frameHeight} · ${Math.round(out.framesPerSecond || 0)} fps`;
+        const codec = (codecs[out.codecId] || '').replace(/^video\//, '');
+        const hw = out.powerEfficientEncoder ?? (out.encoderImplementation ? HW_ENC.test(out.encoderImplementation) : null);
+        if (codec) txt += ` · ${codec}${hw == null ? '' : hw ? ' · Hardware' : ' · Software'}`;
+        if (out.encoderImplementation) tile.el.querySelector('.sinfo').title = out.encoderImplementation;
+      }
+    } catch { /* egal */ }
+  }
+  const box = tile.el.querySelector('.sinfo');
+  if (box) { box.textContent = txt; box.classList.toggle('hidden', !txt); }
 }
 
 function stopScreen() {
   if (!screenStream) return;
+  clearInterval(screenInfoTimer); screenInfoTimer = null;
   screenStream.getTracks().forEach(t => t.stop());
   screenStream = null;
   for (const p of peers.values()) p.removeScreen();

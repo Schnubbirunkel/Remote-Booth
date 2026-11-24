@@ -215,3 +215,6 @@ body.room { overflow: hidden; }
   #side { position: absolute; right: 0; top: 60px; bottom: 84px; z-index: 30; width: min(380px, 60vw); box-shadow: -20px 0 40px rgba(0,0,0,.35); }
   .side-close { display: grid; place-items: center; }
 }
+
+.tile .sinfo { position: absolute; right: 8px; bottom: 8px; z-index: 3; font-size: 11px; font-variant-numeric: tabular-nums; color: #fff; background: rgba(0,0,0,.55); padding: 2px 7px; border-radius: 6px; pointer-events: auto; }
+.tile .sinfo.hidden { display: none; }
