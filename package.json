@@ -1,6 +1,6 @@
 {
   "name": "remote-booth",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Self-hosted remote podcast studio in the browser: separate tracks per guest, editor and export",
   "main": "server/index.js",
   "scripts": {

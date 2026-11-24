@@ -117,5 +117,5 @@ x-casaos:
       de_DE: |
         Nach der Installation die App öffnen: Die Einrichtung fragt nach Passwort, Sprache und Speicherorten. Gäste außerhalb deines Netzes brauchen eine HTTPS-Adresse für Kamera und Mikrofon.
   release_notes:
-    en_US: Screen sharing at 30 fps (15 fps in power-saving mode) with higher bitrate, H.264 hardware encoding where available, and an info badge showing resolution, fps, codec and hardware/software encoding.
-    de_DE: Bildschirmübertragung mit 30 fps (Energiesparmodus 15 fps) und höherer Bitrate, H.264-Hardwarekodierung wo verfügbar, und eine Anzeige mit Auflösung, fps, Codec und Hardware-/Softwarekodierung.
+    en_US: Screen sharing is limited to 1080p / 30 fps by default (also on Retina and 4K displays). Resolution (720p, 1080p, 1440p, original) and frame rate (5–60 fps) can be changed in the device settings.
+    de_DE: Bildschirmübertragung standardmäßig auf 1080p / 30 fps begrenzt (auch bei Retina- und 4K-Displays). Auflösung (720p, 1080p, 1440p, Original) und Bildrate (5–60 fps) lassen sich in den Geräte-Einstellungen umstellen.

@@ -7,7 +7,7 @@ import { locale } from './i18n.js';
 
 const roomId = location.pathname.split('/')[2];
 const myId = clientId();
-const prefs = Object.assign({ ec: true, ns: false, agc: false, bitrate: 192, autoDl: false, mic: '', cam: '', vres: 1080, vfps: 30, mirror: true, eco: false },
+const prefs = Object.assign({ ec: true, ns: false, agc: false, bitrate: 192, autoDl: false, mic: '', cam: '', vres: 1080, vfps: 30, sres: 1080, sfps: 30, mirror: true, eco: false },
   JSON.parse(localStorage.getItem('ps_prefs') || '{}'));
 const savePrefs = () => localStorage.setItem('ps_prefs', JSON.stringify(prefs));
 
@@ -139,9 +139,8 @@ async function applyVideoQuality() {
   const c = videoConstraints();
   delete c.deviceId;
   try { await t.applyConstraints(c); } catch (e) { console.warn(e); }
-  const st = screenStream?.getVideoTracks()[0];
-  if (st) { try { await st.applyConstraints({ frameRate: { ideal: screenFps(), max: screenFps() } }); } catch { /* egal */ } }
-  for (const p of peers.values()) { await tuneVideoSender(p.videoSender); await tuneScreenSender(p.screenSender); }
+  await applyScreenQuality();
+  for (const p of peers.values()) await tuneVideoSender(p.videoSender);
   updateCamInfo();
 }
 // Spiegeln betrifft nur die eigene Anzeige – gesendet wird immer das Originalbild
@@ -853,6 +852,7 @@ async function toggleCam() {
   renderMicCam(); updateLocalTile(); sendStatus();
 }
 
+const screenResPref = () => (prefs.sres === 0 || prefs.sres === '0' ? 0 : (+prefs.sres || 1080));
 async function openSettings() {
   const m = modal(`<h2>Geräte & Audio</h2>
     <div class="col" style="gap:14px">
@@ -862,8 +862,13 @@ async function openSettings() {
         <label class="field grow">Videoauflösung<select data-v="vres">${[480, 720, 1080, 1440, 2160].map(v => `<option value="${v}" ${+prefs.vres === v ? 'selected' : ''}>${v === 2160 ? '4K (2160p)' : v + 'p'}</option>`).join('')}</select></label>
         <label class="field grow">Bildrate<select data-v="vfps">${[24, 25, 30, 50, 60].map(v => `<option value="${v}" ${+prefs.vfps === v ? 'selected' : ''}>${v} fps</option>`).join('')}</select></label>
       </div>
+      <div class="row" style="gap:12px">
+        <label class="field grow">Bildschirmübertragung<select data-v="sres">${[[720, '720p'], [1080, '1080p (Full HD)'], [1440, '1440p'], [0, 'Originalauflösung']].map(([v, l]) => `<option value="${v}" ${screenResPref() === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <label class="field grow">Bildrate Bildschirm<select data-v="sfps">${[5, 15, 30, 60].map(v => `<option value="${v}" ${(+prefs.sfps || 30) === v ? 'selected' : ''}>${v} fps</option>`).join('')}</select></label>
+      </div>
+      <div class="muted" style="font-size:12px;margin-top:-6px">Höhere Werte brauchen mehr Upload und Rechenleistung. Für Folien und Text reichen 15 fps, für Videos und Spiele 30–60 fps.</div>
       <label class="check"><span class="switch"><input type="checkbox" data-mirror ${prefs.mirror ? 'checked' : ''}><span></span></span>Eigenes Kamerabild spiegeln</label>
-      <label class="check"><span class="switch"><input type="checkbox" data-eco ${prefs.eco ? 'checked' : ''}><span></span></span>Energiesparmodus (Video max. 720p / 24 fps – schont den Akku)</label>
+      <label class="check"><span class="switch"><input type="checkbox" data-eco ${prefs.eco ? 'checked' : ''}><span></span></span>Energiesparmodus (Video max. 720p / 24 fps, Bildschirm max. 1080p / 15 fps – schont den Akku)</label>
       <div class="muted" style="font-size:12px">Kamera liefert gerade: <b>${esc(camInfo() || '–')}</b>. Das Video wird nicht aufgenommen, höhere Werte verbessern nur das Bild im Call.</div>
       <div class="row wrap" style="gap:16px">
         <label class="check"><span class="switch"><input type="checkbox" data-o="ec" ${prefs.ec ? 'checked' : ''} ${rec ? 'disabled' : ''}><span></span></span>Echounterdrückung</label>
@@ -886,6 +891,9 @@ async function openSettings() {
     const ecoChanged = $('[data-eco]', m).checked !== !!prefs.eco;
     prefs.eco = $('[data-eco]', m).checked;
     const vres = +$('[data-v=vres]', m).value, vfps = +$('[data-v=vfps]', m).value;
+    const sres = +$('[data-v=sres]', m).value, sfps = +$('[data-v=sfps]', m).value;
+    const screenChanged = ecoChanged || sres !== screenResPref() || sfps !== (+prefs.sfps || 30);
+    prefs.sres = sres; prefs.sfps = sfps;
     const qualityChanged = ecoChanged || vres !== +prefs.vres || vfps !== +prefs.vfps;
     prefs.mic = mic; prefs.ec = o('ec'); prefs.ns = o('ns'); prefs.agc = o('agc'); prefs.cam = cam;
     prefs.vres = vres; prefs.vfps = vfps;
@@ -913,6 +921,7 @@ async function openSettings() {
       } else if (qualityChanged) {
         await applyVideoQuality();
       }
+      if (screenChanged && !qualityChanged) await applyScreenQuality();
       if (camOn() && (camChanged || qualityChanged)) setTimeout(() => toast(`Kamera: ${camInfo()}`), 600);
     } catch (e) { toast('Gerät konnte nicht gewechselt werden: ' + e.message, { error: true }); }
     renderMicCam(); updateLocalTile(); sendStatus();
@@ -1171,16 +1180,42 @@ function screenLayout() {
   layoutTiles(true);
 }
 
-const screenFps = () => (prefs.eco ? 15 : 30);
+// Bildschirm: Standard 1080p / 30 fps – auch bei Retina/4K-Displays wird herunterskaliert.
+// sres = Zeilen (720/1080/1440) oder 0 = Originalauflösung; Energiesparmodus: max. 1080p / 15 fps
+const screenFps = () => { const f = +prefs.sfps || 30; return prefs.eco ? Math.min(15, f) : f; };
+const screenRes = () => { const r = prefs.sres === 0 || prefs.sres === '0' ? 0 : (+prefs.sres || 1080); return prefs.eco ? Math.min(r || 1080, 1080) : r; };
+const screenSize = () => { const r = screenRes(); return r ? { w: Math.round(r * 16 / 9), h: r } : null; };
+function screenConstraints() {
+  const z = screenSize(), f = screenFps();
+  return { frameRate: { ideal: f, max: f }, ...(z ? { width: { max: z.w }, height: { max: z.h } } : {}) };
+}
+// Falls der Browser die Größe beim Aufnehmen nicht begrenzt (z. B. Safari), skaliert der Encoder herunter
+function screenScale(track) {
+  const z = screenSize(), st = track?.getSettings?.() || {};
+  if (!z || !st.width || !st.height) return 1;
+  return Math.max(1, st.width / z.w, st.height / z.h);
+}
+function screenBitrate(track) {
+  const st = track?.getSettings?.() || {}, sc = screenScale(track);
+  const px = st.width ? (st.width / sc) * (st.height / sc) : 1920 * 1080;
+  const b = 6e6 * (px / (1920 * 1080)) * Math.pow(screenFps() / 30, 0.7);
+  return Math.round(Math.min(prefs.eco ? 2e6 : 16e6, Math.max(1e6, b)));
+}
+async function applyScreenQuality() {
+  const t = screenStream?.getVideoTracks()[0];
+  if (!t) return;
+  try { await t.applyConstraints(screenConstraints()); } catch (e) { console.warn('Bildschirm-Parameter', e); }
+  for (const p of peers.values()) await tuneScreenSender(p.screenSender);
+  updateScreenInfo();
+}
 async function tuneScreenSender(sender) {
   if (!sender?.track) return;
   try {
     const prm = sender.getParameters();
     if (!prm.encodings?.length) return;
-    // 30 fps für flüssige Bewegungen (Videos, Scrollen); im Energiesparmodus 15 fps
-    prm.encodings[0].maxBitrate = prefs.eco ? 1.5e6 : 6e6;
+    prm.encodings[0].maxBitrate = screenBitrate(sender.track);
     prm.encodings[0].maxFramerate = screenFps();
-    prm.encodings[0].scaleResolutionDownBy = 1;
+    prm.encodings[0].scaleResolutionDownBy = screenScale(sender.track);
     prm.degradationPreference = 'maintain-resolution'; // Text soll scharf bleiben – bei Engpass lieber weniger fps
     await sender.setParameters(prm);
   } catch (e) { console.warn('Bildschirm-Parameter', e); }
@@ -1189,7 +1224,7 @@ async function tuneScreenSender(sender) {
 async function startScreen() {
   try {
     screenStream = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: { ideal: screenFps(), max: screenFps() }, width: { max: 2560 }, height: { max: 1440 } },
+      video: screenConstraints(),
       audio: false,
     });
   } catch (e) {
@@ -1199,7 +1234,7 @@ async function startScreen() {
   }
   const track = screenStream.getVideoTracks()[0];
   try { track.contentHint = 'detail'; } catch { /* egal */ }
-  try { await track.applyConstraints({ frameRate: { ideal: screenFps(), max: screenFps() } }); } catch { /* egal */ }
+  try { await track.applyConstraints(screenConstraints()); } catch { /* egal */ }
   track.addEventListener('ended', () => stopScreen()); // „Freigabe beenden“ im Browser
   sendStatus(); // erst ankündigen, dann Spur senden → Partner ordnet sie richtig zu
   addTile('me:screen', { name: 'Dein Bildschirm', local: true, screen: true, stream: screenStream });
