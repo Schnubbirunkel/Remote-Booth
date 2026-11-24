@@ -2,8 +2,8 @@
   "apps": [
     {
       "id": "io.github.schnubbirunkel.remotebooth",
-      "title": "Remote Booth",
-      "tagline": "Podcast-Studio für Ferngespräche – jeder Gast auf eigener Spur"
+      "tagline": "Podcast-Studio für Ferngespräche – jeder Gast auf eigener Spur",
+      "title": "Remote Booth"
     }
   ]
 }
