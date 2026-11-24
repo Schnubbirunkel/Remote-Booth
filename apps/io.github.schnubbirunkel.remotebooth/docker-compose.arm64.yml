@@ -1,7 +1,7 @@
 name: remote-booth
 services:
   remote-booth:
-    image: ghcr.io/schnubbirunkel/remote-booth:1.0.0
+    image: ghcr.io/schnubbirunkel/remote-booth:1.0.1@sha256:aa7afdb3a3b1d00e963adaaf6a8db2bed80aa0505d6a5295d0c05d454083bed2
     container_name: remote-booth
     restart: unless-stopped
     network_mode: bridge
@@ -39,7 +39,7 @@ x-casaos:
   port_map: "8090"
   scheme: http
   icon: https://cdn.jsdelivr.net/gh/Schnubbirunkel/Remote-Booth@gh-pages/apps/io.github.schnubbirunkel.remotebooth/assets/icon.svg
-  version: "1.0.0"
+  version: "1.0.1"
   title:
     en_US: Remote Booth
     de_DE: Remote Booth

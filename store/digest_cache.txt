@@ -1,0 +1,1 @@
+ghcr.io/schnubbirunkel/remote-booth:1.0.1 sha256:c3d5b34c8766c27bdce5d6353d0659af856060455979df1af4c20d933eae6aed

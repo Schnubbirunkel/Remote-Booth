@@ -1,9 +1,9 @@
 {
   "id": "io.github.schnubbirunkel.remotebooth",
   "title": "Remote Booth",
-  "release_note": "Erste öffentliche Version.",
-  "tagline": "Podcast-Studio für Ferngespräche – jeder Gast auf eigener Spur",
   "description": "Podcasts mit Gästen aus der Ferne im Browser aufnehmen. Jede Person wird lokal in voller Qualität als eigene MP3-Spur aufgenommen und schon während des Gesprächs auf deinen Server geladen – eine wackelige Verbindung schadet der Aufnahme nicht.\n\nMit Mehrspur-Editor (Clips, Ripple-Schnitt, Fades, Hüllkurven, Gate, EQ, Kompressor, Limiter, Lautheitsangleichung), Mediapool für Intros, Outros und Jingles und einem Export, der die fertige Folge auf deinem Server berechnet.\n\nBeim ersten Start legst du Passwort, Sprache und die Ordner für Aufnahmen, Exporte und Mediapool fest. Für Gäste außerhalb deines Netzes brauchst du eine HTTPS-Adresse (z. B. Cloudflare Tunnel oder Tailscale Funnel) – siehe README.\n",
+  "release_note": "Bildschirmübertragung mit 30 fps (Energiesparmodus 15 fps) und höherer Bitrate, H.264-Hardwarekodierung wo verfügbar, und eine Anzeige mit Auflösung, fps, Codec und Hardware-/Softwarekodierung.",
+  "tagline": "Podcast-Studio für Ferngespräche – jeder Gast auf eigener Spur",
   "tips": {
     "before_install": "Nach der Installation die App öffnen: Die Einrichtung fragt nach Passwort, Sprache und Speicherorten. Gäste außerhalb deines Netzes brauchen eine HTTPS-Adresse für Kamera und Mikrofon.\n"
   }

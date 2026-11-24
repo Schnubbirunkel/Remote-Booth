@@ -21,16 +21,16 @@
     "before_install": "After installation, open the app: the setup screen asks for a password, the language and the storage folders. Guests from outside your network need an HTTPS address for camera and microphone.\n"
   },
   "title": "Remote Booth",
-  "release_note": "First public release.",
+  "release_note": "Screen sharing at 30 fps (15 fps in power-saving mode) with higher bitrate, H.264 hardware encoding where available, and an info badge showing resolution, fps, codec and hardware/software encoding.",
   "base_url": "https://cdn.jsdelivr.net/gh/Schnubbirunkel/Remote-Booth@gh-pages",
   "id": "io.github.schnubbirunkel.remotebooth",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "categories": [
     "media"
   ],
   "min_memory": 0,
   "min_image_size": {
-    "amd64": 0,
-    "arm64": 0
+    "amd64": 113124223,
+    "arm64": 109981206
   }
 }
